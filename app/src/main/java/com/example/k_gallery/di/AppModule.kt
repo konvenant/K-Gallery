@@ -1,6 +1,7 @@
 package com.example.k_gallery.di
 
 import android.content.Context
+import com.example.k_gallery.data.dataSources.api.RetrofitInstance
 import com.example.k_gallery.data.dataSources.local.AllVideosSource
 import com.example.k_gallery.data.dataSources.local.FavoriteDataSource
 import com.example.k_gallery.data.dataSources.local.FolderDataSource
@@ -8,14 +9,14 @@ import com.example.k_gallery.data.dataSources.local.ImageDataSource
 import com.example.k_gallery.data.dataSources.local.PhotosSource
 import com.example.k_gallery.data.dataSources.local.VideoFolderDataSource
 import com.example.k_gallery.data.dataSources.local.VideosInFolderDataSource
-import com.example.k_gallery.data.repositories.AllVideosRepository
-import com.example.k_gallery.data.repositories.FavoriteRepository
-import com.example.k_gallery.data.repositories.FolderRepository
-import com.example.k_gallery.data.repositories.GalleryRepository
-import com.example.k_gallery.data.repositories.ImageRepository
-import com.example.k_gallery.data.repositories.PhotosRepository
-import com.example.k_gallery.data.repositories.VideoFoldersRepository
-import com.example.k_gallery.data.repositories.VideosInFolderRepository
+import com.example.k_gallery.data.repositories.localRepositories.AllVideosRepository
+import com.example.k_gallery.data.repositories.localRepositories.FavoriteRepository
+import com.example.k_gallery.data.repositories.localRepositories.FolderRepository
+import com.example.k_gallery.data.repositories.localRepositories.GalleryRepository
+import com.example.k_gallery.data.repositories.localRepositories.ImageRepository
+import com.example.k_gallery.data.repositories.localRepositories.PhotosRepository
+import com.example.k_gallery.data.repositories.localRepositories.VideoFoldersRepository
+import com.example.k_gallery.data.repositories.localRepositories.VideosInFolderRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -130,5 +131,13 @@ object AppModule {
     fun provideFavoriteRepository(
         favoriteDataSource : FavoriteDataSource
     ) = FavoriteRepository(favoriteDataSource)
+
+
+    @Singleton
+    @Provides
+    fun provideUserRetrofitInstance(
+
+    ) = RetrofitInstance.api
+
 
 }

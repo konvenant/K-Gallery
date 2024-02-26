@@ -1,14 +1,11 @@
 package com.example.k_gallery.presentation.ui
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -16,18 +13,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import com.example.k_gallery.presentation.screens.MainScreen
-import com.example.k_gallery.presentation.util.Constants.REQUEST_STORAGE_PERMISSION
+import com.example.k_gallery.presentation.graph.MainScreen
 import com.example.k_gallery.presentation.util.DisplayImage
-import com.example.k_gallery.presentation.util.DisplayImageOrVideo
 import com.example.k_gallery.presentation.util.DisplayVideo
 import com.example.k_gallery.presentation.viewmodel.IntentViewModel
 import com.example.k_gallery.ui.theme.KGalleryTheme
@@ -64,7 +52,7 @@ class MainActivity : ComponentActivity() {
 
                         }
                         else -> {
-                            MainScreen()
+                            MainScreen(this)
                         }
                     }
 //          intentViewModel.uri?.let {

@@ -1,14 +1,12 @@
 package com.example.k_gallery.presentation.viewmodel
 
-import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.k_gallery.data.dataSources.local.Folder
 import com.example.k_gallery.data.dataSources.local.Image
-import com.example.k_gallery.data.repositories.FolderRepository
-import com.example.k_gallery.data.repositories.ImageRepository
+import com.example.k_gallery.data.repositories.localRepositories.FolderRepository
+import com.example.k_gallery.data.repositories.localRepositories.ImageRepository
 import com.example.k_gallery.presentation.util.Resource
 import com.example.k_gallery.presentation.util.calculateImageSize
 import dagger.hilt.android.lifecycle.HiltViewModel

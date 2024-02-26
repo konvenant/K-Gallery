@@ -2,13 +2,10 @@ package com.example.k_gallery.presentation.util
 
 import android.app.RecoverableSecurityException
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
-import android.view.Display
-import android.view.Window
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.result.ActivityResultLauncher
@@ -23,14 +20,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import coil.compose.AsyncImage
-import com.example.k_gallery.presentation.screens.VideoPlayer
+import com.example.k_gallery.presentation.screens.local.VideoPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
-import kotlin.math.roundToInt
-import kotlin.math.roundToLong
 
 fun calculateImageSize(size: Long) : String{
     val kbSize = size / 1024.0
@@ -208,3 +203,11 @@ fun DisplayVideo(uri: Uri){
         }
     }
 
+data class BottomNavigationItem(
+    val title:String,
+    val selectedIcon: ImageVector,
+    val unSelectedIcon: ImageVector,
+    val hasNew: Boolean,
+    val badgeCount: Int? = null,
+    val route: String
+)

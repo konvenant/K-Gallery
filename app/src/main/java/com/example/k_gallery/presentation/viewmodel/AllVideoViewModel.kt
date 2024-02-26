@@ -11,9 +11,8 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.k_gallery.data.dataSources.local.Image
 import com.example.k_gallery.data.dataSources.local.Video
-import com.example.k_gallery.data.repositories.AllVideosRepository
+import com.example.k_gallery.data.repositories.localRepositories.AllVideosRepository
 import com.example.k_gallery.presentation.util.Resource
 import com.example.k_gallery.presentation.util.calculateImageSize
 import dagger.hilt.android.lifecycle.HiltViewModel
