@@ -2,6 +2,8 @@ package com.example.k_gallery.presentation.screens.remote
 
 import android.annotation.SuppressLint
 import android.content.ClipData.Item
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,15 +58,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.VideoFrameDecoder
+import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.api.models.FavoriteImages
 import com.example.k_gallery.data.dataSources.api.models.FavoriteVideos
 import com.example.k_gallery.data.dataSources.api.models.Image
@@ -77,6 +83,7 @@ import com.example.k_gallery.data.dataSources.api.models.Video
 import com.example.k_gallery.data.dataSources.api.models.VideoX
 import com.example.k_gallery.data.dataSources.api.models.VideoXX
 import com.example.k_gallery.data.dataSources.local.Folder
+import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
 import com.example.k_gallery.presentation.viewmodel.UserViewModel
 
@@ -85,7 +92,8 @@ import com.example.k_gallery.presentation.viewmodel.UserViewModel
 fun UserHomeScreen(
     navController: NavController,
     userViewModel: UserViewModel,
-    email: String
+    email: String,
+    anotherNavController: NavController
 ) {
     LaunchedEffect(Unit){
         userViewModel.getSavedImages(email)
@@ -129,19 +137,26 @@ fun UserHomeScreen(
                                 LazyRow(modifier = Modifier.padding(4.dp,16.dp)){
                                     if (!savedImages.isNullOrEmpty()) {
                                         items(savedImages.take(3)){ image ->
-                                            RecentImageItem(image = image, onItemClick = {
-
+                                            RecentImageItem(image = image, onItemClick = { img ->
+                                                val  encodedUrl = Uri.encode(img.imageUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneImageScreen.route+"/${encodedUrl}"+"/${img.caption}"+"/${img._id}"+"/${img.date}")
                                             })
                                         }
                                         item {
-                                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.ArrowForwardIos,
-                                                        contentDescription = null
-                                                    )
-                                                }
-                                            }
+
+                                               IconButton(onClick = {
+                                                   navController.navigate(NavHelper.SavedMediaScreen.route){
+                                                       popUpTo(navController.graph.findStartDestination().id)
+                                                       launchSingleTop = true
+
+                                                   }
+                                               }, modifier = Modifier.padding(top = 42.dp)) {
+                                                   Icon(
+                                                       imageVector = Icons.Default.ArrowForwardIos,
+                                                       contentDescription = null
+                                                   )
+                                               }
+
 
                                         }
                                     }
@@ -154,22 +169,21 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (savedImagesList as Resource.Error<SavedImages>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                           Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -193,11 +207,20 @@ fun UserHomeScreen(
                                 LazyRow(modifier = Modifier.padding(16.dp)){
                                     if (!savedVideos.isNullOrEmpty()) {
                                         items(savedVideos.take(3)){ video ->
-                                            RecentVideoItem(video, onItemClick = {})
+                                            RecentVideoItem(video, onItemClick = { vid ->
+                                                val  encodedUrl = Uri.encode(vid.videoUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneVideoScreen.route+"/${encodedUrl}"+"/${vid.email}"+"/${vid._id}"+"/${vid.date}")
+                                            })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.SavedMediaScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                },modifier = Modifier.padding(top = 42.dp))  {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -213,23 +236,21 @@ fun UserHomeScreen(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (savedVideosList as Resource.Error<SavedVideos>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -244,22 +265,35 @@ fun UserHomeScreen(
                     when(sentImagesList){
                         is Resource.Success-> {
                             val sentImages = (sentImagesList as Resource.Success<SentImages>).data?.images
+                            val filteredImages= sentImages?.filter { images ->
+                                !images.isSenderDeleted
+                            }
                             Column(modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                                if (!sentImages.isNullOrEmpty()){
+                                if (!filteredImages.isNullOrEmpty()){
                                     Text(text = "Sent Images")
                                 }
-                                LazyRow(modifier = Modifier.padding(16.dp)){
-                                    if (!sentImages.isNullOrEmpty()) {
-                                        items(sentImages.take(3)){ image ->
-                                            RecentSentImageItem(image = image, desc = "Sent to : ${image.toEmail}",onItemClick = {
 
+                                LazyRow(modifier = Modifier.padding(16.dp)){
+                                    if (!filteredImages.isNullOrEmpty()) {
+                                        items(filteredImages.take(3)){ image ->
+
+                                            val desc = "Sent to : ${image.toEmail}"
+                                            RecentSentImageItem(image = image, desc = desc,onItemClick = {img ->
+                                                val  encodedUrl = Uri.encode(img.imageUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneImageScreen.route+"/${encodedUrl}"+"/${desc}"+"/${img._id}"+"/${img.date}")
                                             })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, ) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.SendMediaScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp) ) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -272,31 +306,23 @@ fun UserHomeScreen(
                             }
                         }
                         is Resource.Loading -> {
-
-//                            CircularProgressIndicator(
-//                                modifier = Modifier
-//                                    .size(40.dp)
-//
-//                            )
-
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
                         }
                         is Resource.Error -> {
                             val errorMessage = (sentImagesList as Resource.Error<SentImages>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -308,20 +334,34 @@ fun UserHomeScreen(
                     when(sentVideosList){
                         is Resource.Success-> {
                             val sentVideos = (sentVideosList as Resource.Success<SentVideos>).data?.videos
+
+                            val filteredVideos = sentVideos?.filter { video ->
+                                !video.isSenderDeleted
+                            }
                             Column(modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                                if (!sentVideos.isNullOrEmpty()){
+                                if (!filteredVideos.isNullOrEmpty()){
                                     Text(text = "Sent Videos")
                                 }
                                 LazyRow(modifier = Modifier.padding(16.dp)){
-                                    if (!sentVideos.isNullOrEmpty()) {
-                                        items(sentVideos.take(3)){ video ->
-                                            RecentSentVideoItem(video, desc = "Sent to : ${video.toEmail}",onItemClick = {})
+                                    if (!filteredVideos.isNullOrEmpty()) {
+                                        items(filteredVideos.take(3)){ video ->
+                                            val desc = "Sent to : ${video.toEmail}"
+                                            RecentSentVideoItem(video,desc,onItemClick = { vid ->
+                                                val  encodedUrl = Uri.encode(vid.videoUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneVideoScreen.route+"/${encodedUrl}"+"/${desc}"+"/${vid._id}"+"/${vid.date}")
+                                            })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.SendMediaScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp)) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -339,21 +379,20 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (sentVideosList as Resource.Error<SentVideos>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -368,22 +407,34 @@ fun UserHomeScreen(
                     when(receivedImageList){
                         is Resource.Success-> {
                             val receivedImages = (receivedImageList as Resource.Success<SentImages>).data?.images
+
+                            val filteredImages= receivedImages?.filter { images ->
+                                !images.isRecieverDeleted
+                            }
                             Column(modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                                if (!receivedImages.isNullOrEmpty()){
+                                if (!filteredImages.isNullOrEmpty()){
                                     Text(text = "Received Images")
                                 }
                                 LazyRow(modifier = Modifier.padding(16.dp)){
-                                    if (!receivedImages.isNullOrEmpty()) {
-                                        items(receivedImages.take(3)){ image ->
-                                            RecentSentImageItem(image = image, desc = "Sent by : ${image.fromEmail}",onItemClick = {
-
+                                    if (!filteredImages.isNullOrEmpty()) {
+                                        items(filteredImages.take(3)){ image ->
+                                            val desc = "Sent by : ${image.fromEmail}"
+                                            RecentSentImageItem(image = image, desc = desc,onItemClick = { img ->
+                                                val  encodedUrl = Uri.encode(img.imageUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneImageScreen.route+"/${encodedUrl}"+"/${desc}"+"/${img._id}"+"/${img.date}")
                                             })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.SendMediaScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp)) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -401,20 +452,20 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
+
                             }
                         }
                         is Resource.Error -> {
                             val errorMessage = (receivedImageList as Resource.Error<SentImages>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -426,20 +477,35 @@ fun UserHomeScreen(
                     when(receivedVideoList){
                         is Resource.Success-> {
                             val receivedVideos = (receivedVideoList as Resource.Success<SentVideos>).data?.videos
+
+                            val filteredVideos = receivedVideos?.filter { video ->
+                                !video.isRecieverDeleted
+                            }
+
                             Column(modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(8.dp)) {
-                                if (!receivedVideos.isNullOrEmpty()){
-                                    Text(text = "Recieved Videos")
+                                if (!filteredVideos.isNullOrEmpty()){
+                                    Text(text = "Received Videos")
                                 }
                                 LazyRow(modifier = Modifier.padding(16.dp)){
-                                    if (!receivedVideos.isNullOrEmpty()) {
-                                        items(receivedVideos.take(3)){ video ->
-                                            RecentSentVideoItem(video, desc = "Sent from : ${video.toEmail}",onItemClick = {})
+                                    if (!filteredVideos.isNullOrEmpty()) {
+                                        items(filteredVideos.take(3)){ video ->
+                                            val desc = "Sent from : ${video.toEmail}"
+                                            RecentSentVideoItem(video, desc = desc,onItemClick = {vid ->
+                                                val  encodedUrl = Uri.encode(vid.videoUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneVideoScreen.route+"/${encodedUrl}"+"/${desc}"+"/${vid._id}"+"/${vid.date}")
+                                            })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.SendMediaScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp)) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -457,21 +523,20 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (receivedVideoList as Resource.Error<SentVideos>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -495,13 +560,20 @@ fun UserHomeScreen(
                                 LazyRow(modifier = Modifier.padding(16.dp)){
                                     if (!favoriteImages.isNullOrEmpty()) {
                                         items(favoriteImages.take(3)){ image ->
-                                            RecentFavoriteImageItem(image = image,onItemClick = {
-
+                                            RecentFavoriteImageItem(image = image,onItemClick = {img ->
+                                                val  encodedUrl = Uri.encode(img.imageUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneImageScreen.route+"/${encodedUrl}"+"/${img.email}"+"/${img._id}"+"/${img.date}")
                                             })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.OnlineFavoriteScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp)) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -519,21 +591,20 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (favoriteImageList as Resource.Error<FavoriteImages>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -554,11 +625,20 @@ fun UserHomeScreen(
                                 LazyRow(modifier = Modifier.padding(16.dp)){
                                     if (!favoriteVideos.isNullOrEmpty()) {
                                         items(favoriteVideos.take(3)){ video ->
-                                            RecentFavoriteVideoItem(video = video, onItemClick = {})
+                                            RecentFavoriteVideoItem(video = video, onItemClick = { vid ->
+                                                val  encodedUrl = Uri.encode(vid.videoUrl)
+                                                anotherNavController.navigate(NavHelper.ViewOneVideoScreen.route+"/${encodedUrl}"+"/${vid.email}"+"/${vid._id}"+"/${vid.date}")
+                                            })
                                         }
                                         item {
                                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                IconButton(onClick = {}, modifier = Modifier.align(Alignment.Center)) {
+                                                IconButton(onClick = {
+                                                    navController.navigate(NavHelper.OnlineFavoriteScreen.route){
+                                                        popUpTo(navController.graph.findStartDestination().id)
+                                                        launchSingleTop = true
+
+                                                    }
+                                                }, modifier = Modifier.padding(top = 42.dp)) {
                                                     Icon(
                                                         imageVector = Icons.Default.ArrowForwardIos,
                                                         contentDescription = null
@@ -576,21 +656,20 @@ fun UserHomeScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ){
-                                repeat(2) {
-                                    ShimmerLoading(modifier = Modifier.fillMaxWidth(0.5f).height(250.dp).padding(8.dp))
-                                }
+
+                                    ShimmerLoading(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(250.dp)
+                                        .padding(8.dp))
+
                             }
 
                         }
                         is Resource.Error -> {
                             val errorMessage = (favoriteVideoList as Resource.Error<FavoriteVideos>).message
-                            Text(
-                                text = "Error: $errorMessage",
-                                color = Color.Red,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp)
-                            )
+                            val error =   "Error: $errorMessage"
+                            val context = LocalContext.current
+                            Toast.makeText(context,error,Toast.LENGTH_SHORT).show()
 
                         }
 
@@ -610,7 +689,7 @@ fun RecentImageItem(
 ){
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(image) }
             .padding(8.dp)
     ){
@@ -621,7 +700,9 @@ fun RecentImageItem(
                 .fillMaxWidth()
                 .height(150.dp)
                 .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = R.drawable.full_logo),
+            error = painterResource(id = R.drawable.logo)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -666,14 +747,17 @@ fun RecentVideoItem(
 
     val painter = rememberAsyncImagePainter(
         model = video.videoUrl,
-        imageLoader = imageLoader
+        imageLoader = imageLoader,
+        error = painterResource(id = R.drawable.full_logo),
+        placeholder = painterResource(id = R.drawable.full_logo)
     )
 
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(video) }
             .padding(8.dp)
+            .clip(RoundedCornerShape(16.dp)),
     ){
 
         Box(
@@ -684,7 +768,8 @@ fun RecentVideoItem(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
             IconButton(
@@ -729,7 +814,7 @@ fun RecentSentImageItem(
 ){
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(image) }
             .padding(8.dp)
     ){
@@ -740,7 +825,9 @@ fun RecentSentImageItem(
                 .fillMaxWidth()
                 .height(150.dp)
                 .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = R.drawable.full_logo),
+            error = painterResource(id = R.drawable.logo)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -785,12 +872,14 @@ fun RecentSentVideoItem(
 
     val painter = rememberAsyncImagePainter(
         model = video.videoUrl,
-        imageLoader = imageLoader
+        imageLoader = imageLoader,
+        error = painterResource(id = R.drawable.full_logo),
+        placeholder = painterResource(id = R.drawable.full_logo)
     )
 
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(video) }
             .padding(8.dp)
     ){
@@ -803,7 +892,8 @@ fun RecentSentVideoItem(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
             IconButton(
@@ -853,7 +943,7 @@ fun RecentFavoriteImageItem(
 ){
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(image) }
             .padding(8.dp)
     ){
@@ -864,7 +954,9 @@ fun RecentFavoriteImageItem(
                 .fillMaxWidth()
                 .height(150.dp)
                 .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = R.drawable.full_logo),
+            error = painterResource(id = R.drawable.logo)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(
@@ -903,25 +995,28 @@ fun RecentFavoriteVideoItem(
 
     val painter = rememberAsyncImagePainter(
         model = video.videoUrl,
-        imageLoader = imageLoader
+        imageLoader = imageLoader,
+        error = painterResource(id = R.drawable.full_logo),
+        placeholder = painterResource(id = R.drawable.full_logo)
     )
 
     Column (
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.5f)
             .clickable { onItemClick(video) }
             .padding(8.dp)
     ){
 
         Box(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(0.5f)
         ){
             Image(
                 painter = painter,
                 contentDescription = null,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                    .fillMaxWidth(0.5f)
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
             IconButton(

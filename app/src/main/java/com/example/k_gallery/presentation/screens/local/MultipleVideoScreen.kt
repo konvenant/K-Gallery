@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +16,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.BottomAppBar
@@ -40,13 +43,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
+import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.Video
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.util.calculateImageSize
 import com.example.k_gallery.presentation.viewmodel.AllVideoViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
 
 
@@ -55,10 +64,27 @@ import kotlinx.coroutines.delay
 @Composable
 fun MultipleVideoScreen(
     navController: NavController,
-    videoIndex: String
+    videoIndex: String,
+    lifecycleOwner: LifecycleOwner
 ) {
     val allVideosViewModel : AllVideoViewModel = hiltViewModel()
+
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
+
 
     var isVisible by remember {
         mutableStateOf(true)
@@ -176,7 +202,7 @@ fun MultipleVideoScreen(
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Black,
+                        containerColor = Color.Transparent,
                     )
                 )
 
@@ -200,7 +226,30 @@ fun MultipleVideoScreen(
                                 tint = Color.White
                             )
                         }
-                    }, containerColor = Color.Black
+
+
+                        IconButton(
+                            onClick = {
+                                performSaveSingleVideoToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    Uri.parse(videoUri),
+                                    imgName,
+                                    lifecycleOwner,
+                                ){ state ->
+                                    stateLoading = state
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+
+                    }, containerColor = Color.Transparent
                 )
             }
         }
@@ -230,6 +279,21 @@ fun MultipleVideoScreen(
                             })
                         }
                     }
+
+                    if(stateLoading){
+                        LoadingDialog()
+                    }
+                }
+                is Resource.Error -> {
+                    Image(
+                        modifier = Modifier.fillMaxSize(),
+                        painter = painterResource(id = R.drawable.k_error1),
+                        contentDescription = null
+                    )
+                }
+
+                is Resource.Loading -> {
+                    LoadingDialog()
                 }
                 else -> {}
             }

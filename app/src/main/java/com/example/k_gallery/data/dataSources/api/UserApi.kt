@@ -1,5 +1,7 @@
 package com.example.k_gallery.data.dataSources.api
 
+import com.example.k_gallery.data.dataSources.api.models.ChatItems
+import com.example.k_gallery.data.dataSources.api.models.ChatMessageList
 import com.example.k_gallery.data.dataSources.api.models.FavoriteImageAddRequest
 import com.example.k_gallery.data.dataSources.api.models.FavoriteImageDeleteRequest
 import com.example.k_gallery.data.dataSources.api.models.FavoriteImages
@@ -88,7 +90,6 @@ interface UserApi {
         @Field("email") email: String
     ): Response<Message>
 
-
     @POST("auth/forgotPassword/{email}")
     suspend fun forgotPassword(@Path("email")email: String): Response<User>
 
@@ -101,15 +102,12 @@ interface UserApi {
         @Field("password") password: String
     ): Response<User>
 
-
     @Multipart
     @PUT
     suspend fun updateImage(
         @Url url: String,
         @Part image: MultipartBody.Part
     ): Response<User>
-
-
 
     @GET("user/notification/{email}")
     suspend fun getUserNotifications(@Path("email")email: String): Response<NotificationResponse>
@@ -127,10 +125,6 @@ interface UserApi {
         @Field("email") email: String
     ) : Response<Message>
 
-
-
-
-
     @Multipart
     @POST("action/save-image/{email}/{caption}")
     suspend fun saveImage(
@@ -147,7 +141,6 @@ interface UserApi {
         @Part video: MultipartBody.Part
     ) : Response<User>
 
-
     @Multipart
     @POST("action/save-multipleImage/{email}/{caption}")
     suspend fun saveMultipleImage(
@@ -156,7 +149,6 @@ interface UserApi {
         @Part images: List<MultipartBody.Part>
     ) : Response<Message>
 
-
     @Multipart
     @POST("action/save-multipleVideo/{email}/{caption}")
     suspend fun saveMultipleVideo(
@@ -164,7 +156,6 @@ interface UserApi {
         @Path("caption") caption: String,
         @Part videos: List<MultipartBody.Part>,
     ) : Response<Message>
-
 
     @GET("action/get-savedImages/{email}")
     suspend fun getSavedImages(
@@ -176,7 +167,6 @@ interface UserApi {
         @Path("email")email: String
     ):Response<SavedVideos>
 
-
     @POST("action/delete-savedImage/{email}/{id}")
     suspend fun deleteSavedImage(
         @Path("email") email: String,
@@ -184,7 +174,6 @@ interface UserApi {
     ):Response<Message>
 
     //json
-    @FormUrlEncoded
     @POST("action/delete-multipleSavedImages")
     suspend fun deleteMultipleSavedImages(
     @Body request: ImageDeleteRequest
@@ -197,7 +186,6 @@ interface UserApi {
     ):Response<Message>
 
     //json
-
     @POST("/action/delete-multipleSavedVideos")
     suspend fun deleteMultipleSavedVideos(
   @Body request: VideoDeleteRequest
@@ -223,18 +211,20 @@ interface UserApi {
         @Path("email")email: String
     ) : Response<SentVideos>
 
-    @GET("action/getAll-chatImages/{fromEmail}/{toEmail}")
+    @GET("action/getAllChatImages/{fromEmail}/{toEmail}")
     suspend fun getAllChatImages(
-        @Path("email")email: String
+        @Path("fromEmail")fromEmail: String,
+        @Path("toEmail")toEmail: String
     ): Response<SentImages>
 
-    @GET("action/getAll-chatVideos/{fromEmail}/{toEmail}")
+    @GET("action/getAllChatVideos/{fromEmail}/{toEmail}")
     suspend fun getAllChatVideos(
-        @Path("email")email: String
+        @Path("fromEmail")fromEmail: String,
+        @Path("toEmail")toEmail: String
     ) : Response<SentVideos>
 
     @FormUrlEncoded
-    @POST("action/deleteSentImage")
+    @POST("action/delete-sentImage")
     suspend fun deleteSentImage(
         @Field("fromEmail") fromEmail: String,
         @Field("toEmail") toEmail: String,
@@ -257,7 +247,6 @@ interface UserApi {
         @Field("id") id: String
     ): Response<Message>
 
-
     @FormUrlEncoded
     @POST("action/delete-recievedVideo")
     suspend fun deleteReceievedVideo(
@@ -266,20 +255,17 @@ interface UserApi {
         @Field("id") id: String
     ) : Response<Message>
 
-
-
-    @POST("action/delete-multipleImages")
+    @POST("action/delete-multipleImage")
     suspend fun deleteMultipleImage(
     @Body request: SentImageDeleteRequest
     ) : Response<Message>
-
 
     @POST("action/delete-multipleVideos")
     suspend fun deleteMultipleVideos(
         @Body request: SentVideoDeleteRequest
     ) : Response<Message>
 
-    @FormUrlEncoded
+    @Multipart
     @POST("action/send-image/{fromEmail}/{toEmail}/{caption}")
     suspend fun sendImage(
         @Path("fromEmail") fromEmail: String,
@@ -288,7 +274,7 @@ interface UserApi {
         @Part image: MultipartBody.Part
     ): Response<Message>
 
-    @FormUrlEncoded
+    @Multipart
     @POST("action/send-video/{fromEmail}/{toEmail}/{caption}")
     suspend fun sendVideo(
         @Path("fromEmail") fromEmail: String,
@@ -297,12 +283,10 @@ interface UserApi {
         @Part video: MultipartBody.Part
     ) : Response<User>
 
-
     @POST("action/send-multipleImages")
     suspend fun sendMultipleImage(
         @Body request: ImageSendRequest
     ) : Response<Message>
-
 
     @POST("action/send-multipleVideos")
     suspend fun sendMultipleVideos(
@@ -323,12 +307,10 @@ interface UserApi {
         @Field("videoUrl") videoUrl: String
     ):Response<Message>
 
-
     @GET("action/getAllFavoriteImages/{email}")
     suspend fun getFavoriteImages(
         @Path("email") email: String
     ) : Response<FavoriteImages>
-
 
     @GET("action/getAllFavoriteVideos/{email}")
     suspend fun getFavoriteVideos(
@@ -349,24 +331,20 @@ interface UserApi {
         @Field("id") id: String
     ) : Response<Message>
 
-
-    @POST("action/deleteMultipleFavoriteImage")
+    @POST("action/deleteMultipleFavoriteImages")
     suspend fun deleteMultipleFavoriteImage(
       @Body request: FavoriteImageDeleteRequest
     ): Response<Message>
 
-
-    @POST("action/deleteMultipleFavoriteVideo")
+    @POST("action/deleteMultipleFavoriteVideos")
     suspend fun deleteMultipleFavoriteVideo(
         @Body request: FavoriteVideoDeleteRequest
     ) : Response<Message>
 
-
-    @POST("action/addMultipleFavoriteImage")
+    @POST("action/addMultipleFavoriteImages")
     suspend fun addMultipleFavoriteImage(
         @Body request:FavoriteImageAddRequest
     ): Response<Message>
-
 
     @POST("action/addMultipleFavoriteVideo")
     suspend fun addMultipleFavoriteVideo(
@@ -383,7 +361,7 @@ interface UserApi {
     @POST("action/getUserEmail")
     suspend fun getUserEmail(
         @Field("email") email: String
-    ):Response<UserX>
+    ):Response<User>
 
     @FormUrlEncoded
     @POST("action/addSearchedEmail")
@@ -409,6 +387,7 @@ interface UserApi {
         @Path("email") email: String
     ): Response<Settings>
 
+    @FormUrlEncoded
     @POST("action/updateSetting")
     suspend fun updateSetting(
         @Field("email") email: String,
@@ -417,4 +396,15 @@ interface UserApi {
         @Field("notificationOn") notificationOn: Boolean,
         @Field("sendNewsLetter") sendNewsLetter: Boolean
     ) : Response<Settings>
+
+    @GET("action/chatList/{email}")
+    suspend fun getChatItemList(
+        @Path("email") email: String
+    ) : Response<ChatItems>
+
+    @GET("action/chatMesaageList/{email1}/{email2}")
+    suspend fun getChatMessageList(
+        @Path("email1") email1: String,
+        @Path("email2") email2: String
+    ) : Response<ChatMessageList>
 }

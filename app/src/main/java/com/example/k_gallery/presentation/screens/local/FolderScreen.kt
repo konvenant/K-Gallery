@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +33,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,16 +57,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.Image
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
+import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserPreferences
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.viewmodel.ImageViewModel
 import com.example.k_gallery.presentation.viewmodel.ImageViewState
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -73,12 +85,29 @@ import com.example.k_gallery.presentation.viewmodel.ImageViewState
 fun FoldersScreen(
     navController: NavController,
     folderId:String,
-    folderName: String
+    folderName: String,
+    lifecycleOwner: LifecycleOwner
 ){
     val imageViewModel : ImageViewModel = hiltViewModel()
     val folderSize = imageViewModel.folderMetrics.value?.first
     val folderCount = imageViewModel.folderMetrics.value?.second.toString()
+
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
+
 
     var selected by remember {
         mutableStateOf(false)
@@ -155,6 +184,33 @@ fun FoldersScreen(
                                 contentDescription = null
                             )
                         }
+
+
+                        IconButton(
+                            onClick = {
+                                performSaveMultipleImagesToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    selectedImages.map { it.uri },
+                                    folderName,
+                                    lifecycleOwner,
+                                    showLoadingDialog = { state ->
+                                        stateLoading = state
+                                    },
+                                    isSuccess = {
+                                        selectedImages.clear()
+                                        selected = false
+                                        cancel = false
+                                    }
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
+                            )
+                        }
                     }
                 )
             } else{
@@ -206,13 +262,10 @@ fun FoldersScreen(
                 }
                 is ImageViewState.Error -> {
                     val errorMessage = (imageViewModel.viewState.value as ImageViewState.Error).message
-                    Text(
-                        text = "Error: $errorMessage",
-                        color = Color.Red,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .align(Alignment.Center)
+                    Image(
+                        modifier = Modifier.fillMaxSize(),
+                        painter = painterResource(id = R.drawable.k_error1),
+                        contentDescription = null
                     )
                 }
                 is ImageViewState.Success -> {
@@ -236,6 +289,10 @@ fun FoldersScreen(
                         },
                         cancelAction = cancel
                     )
+
+                    if (stateLoading){
+                        LoadingDialog()
+                    }
                 }
 
                 else -> {}
@@ -378,7 +435,12 @@ fun ImageList(
                 contentPadding = PaddingValues(top = 40.dp)
             ){
 
-                items(images){ image ->
+                items(
+                    images,
+                    key = {
+                        it.id
+                    }
+                ){ image ->
                     val isSelected = selectedImages.contains(image)
 
                     ImageItem(
@@ -476,7 +538,12 @@ fun  PhotoImageList(
     ){
 
 
-        items(images){ image ->
+        items(
+            images,
+            key = {
+                it.id
+            }
+        ){ image ->
             val isSelected = selectedImages.contains(image)
             ImageItem(
                 image = image,
@@ -600,5 +667,47 @@ fun shareMultipleImages(
         )
     }
     context.startActivity(Intent.createChooser(shareIntent,"Share Images"))
+}
+fun performSaveMultipleImagesToAccount(
+    userViewModel: UserViewModel,
+    pref: UserPreferences,
+    context: Context,
+    imageUris : List<Uri>,
+    caption: String,
+    lifecycleOwner: LifecycleOwner,
+    showLoadingDialog: (Boolean) -> Unit,
+    isSuccess: () -> Unit
+) {
+    if (pref.isLoggedIn){
+        userViewModel.saveMultipleImage(pref.email,imageUris,context, caption)
+        userViewModel.saveMultipleImageResponse.observe(
+            lifecycleOwner, Observer { message ->
+                when(message) {
+                    is  Resource.Success ->{
+                        val successMessage = message.data?.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,successMessage,Toast.LENGTH_LONG).show()
+                        isSuccess()
+                    }
+
+                    is Resource.Loading -> {
+                        showLoadingDialog(true)
+                    }
+
+                    is Resource.Error ->{
+                        val errMessage = message.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,errMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    else -> {
+
+                    }
+                }
+            }
+        )
+    } else{
+        Toast.makeText(context,"No Account Associated with this device, navigate to account to either SignUp or Login",Toast.LENGTH_LONG).show()
+    }
 }
 

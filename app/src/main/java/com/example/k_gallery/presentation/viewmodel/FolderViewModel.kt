@@ -24,13 +24,10 @@ class FolderViewModel @Inject constructor(
 
     var dummyList = mutableListOf<Folder>()
 
-    init {
-        fetchFoldersWithRecentImages()
-    }
-
+    
    val folder: String = "Folders"
 
-    private fun fetchFoldersWithRecentImages() {
+     fun fetchFoldersWithRecentImages() {
        folderList.postValue(Resource.Loading())
         viewModelScope.launch {
             try {

@@ -32,7 +32,7 @@ class UserSharedPrefManager (context: Context) {
     }
 
     fun getFirstTime() : Boolean{
-        return sharedPreferences.getBoolean(isFirstTime,false)
+        return sharedPreferences.getBoolean(isFirstTime,true)
     }
 
     fun setFirstTime(firstTime:Boolean){

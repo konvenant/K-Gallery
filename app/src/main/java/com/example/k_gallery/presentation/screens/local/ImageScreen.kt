@@ -5,6 +5,7 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.example.k_gallery.R
 import android.os.Build
 import android.util.Log
 import android.view.WindowInsets
@@ -14,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -25,8 +27,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
@@ -38,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -49,17 +54,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.k_gallery.data.dataSources.local.Image
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserPreferences
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.util.calculateImageSize
 import com.example.k_gallery.presentation.util.deleteImage
 import com.example.k_gallery.presentation.viewmodel.ImageViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
 
 
@@ -70,12 +83,25 @@ import kotlinx.coroutines.delay
 fun ImageScreen(
     navController: NavController,
     imageIndex: String,
-    folderId: String
+    folderId: String,
+    lifecycleOwner: LifecycleOwner
 ){
 
     val windowInsetsController = LocalView.current.windowInsetsController
     val imageViewModel : ImageViewModel = hiltViewModel()
+    val userViewModel: UserViewModel = hiltViewModel()
+
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+
     var isVisible by remember {
     mutableStateOf(true)
 }
@@ -112,7 +138,6 @@ val rotationState = remember {
     }
     val zoomState = rememberTransformableState{zoom, _, _ ->
         scale.floatValue *=  zoom
-
     }
     val pagerState = rememberPagerState(imageIndex.toInt())
 
@@ -196,6 +221,10 @@ val rotationState = remember {
 
     }
 
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
 
 
 
@@ -285,6 +314,27 @@ val rotationState = remember {
                            )
                        }
 
+                       IconButton(
+                           onClick = {
+                               performSaveSingleImageToAccount(
+                                   userViewModel,
+                                   userPref,
+                                   context,
+                                   Uri.parse(imageUri),
+                                   imgName,
+                                   lifecycleOwner,
+                               ){ state ->
+                                   stateLoading = state
+                               }
+                           }
+                       ) {
+                           Icon(
+                               imageVector = Icons.Default.Backup,
+                               contentDescription = null,
+                               tint = Color.White
+                           )
+                       }
+
                    }, containerColor = Color.Black
                        )
            }
@@ -298,7 +348,6 @@ val rotationState = remember {
                is Resource.Success -> {
 
                    val image = (imageList as Resource.Success<List<Image>>).data
-
 
                    image?.let {
                        HorizontalPager(
@@ -321,7 +370,25 @@ val rotationState = remember {
 
                            }
                        }
+
+                   if (stateLoading){
+                       LoadingDialog()
                    }
+
+
+                   }
+
+               is Resource.Error -> {
+                   Image(
+                       modifier = Modifier.fillMaxSize(),
+                       painter = painterResource(id = R.drawable.k_error1),
+                       contentDescription = null
+                   )
+               }
+
+               is Resource.Loading -> {
+                   LoadingDialog()
+               }
 
 
                else -> {}
@@ -383,6 +450,48 @@ val rotationState = remember {
 
 }
 
+fun performSaveSingleImageToAccount(
+    userViewModel: UserViewModel,
+    pref: UserPreferences,
+    context: Context,
+    imageUri : Uri,
+    caption: String,
+    lifecycleOwner: LifecycleOwner,
+    showLoadingDialog: (Boolean) -> Unit
+) {
+    if (pref.isLoggedIn){
+        userViewModel.saveSingleImage(pref.email,imageUri,caption,context)
+        userViewModel.saveImageResponse.observe(
+            lifecycleOwner, Observer { message ->
+                when(message) {
+                    is  Resource.Success ->{
+                        val successMessage = message.data?.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,successMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    is Resource.Loading -> {
+                        showLoadingDialog(true)
+                    }
+
+                    is Resource.Error ->{
+                        val errMessage = message.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,errMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    else -> {
+
+                    }
+                }
+            }
+        )
+    } else{
+        Toast.makeText(context,"No Account Associated with this device, navigate to account to either SignUp or Login",Toast.LENGTH_LONG).show()
+    }
+}
+
+
 @Composable
 fun ShowDeleteConfirmationALertDialog(
     title: String,
@@ -419,6 +528,7 @@ fun ShowDeleteConfirmationALertDialog(
     val chooser = Intent.createChooser(intent, "Share Image")
     context.startActivity(chooser)
 }
+
 
  fun openImage(context: Context,imageUri: String){
     val intent = Intent(Intent.ACTION_VIEW)

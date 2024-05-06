@@ -92,7 +92,7 @@ fun SignupScreen(
         }
 
 
-        val showError by remember {
+        var showError by remember {
             mutableStateOf(false)
         }
 
@@ -168,6 +168,7 @@ fun SignupScreen(
                 value = password,
                 onValueChange = {
                     password = it
+                    showError = true
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -193,13 +194,7 @@ fun SignupScreen(
                 singleLine = true
             )
 
-            if (!requiredPasswordLength){
-                Text(
-                    text = "Password should be 4 digit or more",
-                    color = Color.Red,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
+
 
             OutlinedTextField(
                 value = confirmPassword,
@@ -237,6 +232,16 @@ fun SignupScreen(
                     modifier = Modifier.padding(16.dp)
                 )
             }
+
+           if(showError){
+               if (!requiredPasswordLength){
+                   Text(
+                       text = "Password should be 4 digit or more",
+                       color = Color.Red,
+                       modifier = Modifier.padding(8.dp)
+                   )
+               }
+           }
 
             Button(
                 onClick = {

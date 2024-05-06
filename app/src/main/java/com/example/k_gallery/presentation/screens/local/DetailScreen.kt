@@ -63,7 +63,7 @@ fun DetailScreen(
                 }
             )
         }
-            ) {
+    ) {
 
         Column(Modifier.fillMaxSize()) {
             Text(
@@ -78,6 +78,61 @@ fun DetailScreen(
             DetailItem(
                 icon = Icons.Default.DateRange,
                 title = formattedDate.toString(),
+                desc = size
+            )
+
+        }
+
+    }
+
+}
+
+
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "SuspiciousIndentation",
+    "SimpleDateFormat"
+)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun DetailScreen2(
+    navController: NavController,
+    name: String,
+    path: String,
+    dateTaken: String,
+    size: String
+) {
+
+
+    Scaffold (
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(text = "Info")
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack
+                            , contentDescription = null
+                        )
+                    }
+                }
+            )
+        }
+    ) {
+
+        Column(Modifier.fillMaxSize()) {
+            Text(
+                text = "Details",
+                modifier = Modifier.padding(16.dp)
+            )
+            DetailItem(
+                icon = Icons.Default.DevicesOther,
+                title = name,
+                desc = path
+            )
+            DetailItem(
+                icon = Icons.Default.DateRange,
+                title = dateTaken,
                 desc = size
             )
 

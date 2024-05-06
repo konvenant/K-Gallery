@@ -15,7 +15,7 @@ import com.example.k_gallery.presentation.screens.local.FoldersScreen
 import com.example.k_gallery.presentation.screens.local.HomeScreen
 import com.example.k_gallery.presentation.screens.local.ImageScreen
 import com.example.k_gallery.presentation.screens.local.MultipleVideoScreen
-import com.example.k_gallery.presentation.screens.local.OnboardingScreen
+import com.example.k_gallery.presentation.screens.local.OnboardScreen
 import com.example.k_gallery.presentation.screens.local.PhotosImageScreen
 import com.example.k_gallery.presentation.screens.local.PhotosScreen
 import com.example.k_gallery.presentation.screens.local.SplashScreen
@@ -62,13 +62,13 @@ fun NavGraphBuilder.authNavGraph(
         composable(route = NavHelper.FoldersScreen.route+"/{folderId}"+"/{folderName}"){ backEntry ->
             val folderId = backEntry.arguments?.getString("folderId") ?: ""
             val folderName = backEntry.arguments?.getString("folderName") ?: ""
-            FoldersScreen(navController = navController, folderId = folderId, folderName = folderName)
+            FoldersScreen(navController = navController, folderId = folderId, folderName = folderName,lifecycleOwner)
         }
 
         composable(route = NavHelper.ImageScreen.route+"/{imageIndex}"+"/{folderId}"){ backEntry ->
             val imageIndex = backEntry.arguments?.getString("imageIndex") ?: ""
             val folderId = backEntry.arguments?.getString("folderId") ?: ""
-            ImageScreen(navController = navController,imageIndex,folderId)
+            ImageScreen(navController = navController,imageIndex,folderId,lifecycleOwner)
         }
 
         composable(route = NavHelper.HomeScreen.route){
@@ -80,33 +80,33 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable(route = NavHelper.PhotosScreen.route){
-            PhotosScreen(navController = navController)
+            PhotosScreen(navController = navController,lifecycleOwner)
         }
 
         composable(route = NavHelper.PhotosImageScreen.route+"/{imageIndex}"){ backEntry ->
             val imageIndex = backEntry.arguments?.getString("imageIndex") ?: ""
-            PhotosImageScreen(navController = navController,imageIndex)
+            PhotosImageScreen(navController = navController,imageIndex,lifecycleOwner)
         }
 
         composable(route = NavHelper.VideosInFolderScreen.route+"/{folderId}"+"/{folderName}") { backEntry ->
             val folderId = backEntry.arguments?.getString("folderId") ?: ""
             val folderName = backEntry.arguments?.getString("folderName") ?: ""
-            VideosInFolderScreen(navController = navController, folderId,folderName)
+            VideosInFolderScreen(navController = navController, folderId,folderName,lifecycleOwner)
         }
 
         composable(route = NavHelper.VideoScreen.route+"/{videoIndex}"+"/{folderId}"){ backEntry ->
             val videoIndex = backEntry.arguments?.getString("videoIndex") ?: ""
             val folderId = backEntry.arguments?.getString("folderId") ?: ""
-            VideoScreen(navController = navController,videoIndex,folderId)
+            VideoScreen(navController = navController,videoIndex,folderId,lifecycleOwner)
         }
 
         composable(route = NavHelper.AllVideosScreen.route){
-            AllVideosScreen(navController)
+            AllVideosScreen(navController,lifecycleOwner)
         }
 
         composable(route = NavHelper.MultipleVideoScreen.route+"/{videoIndex}"){ backEntry ->
             val videoIndex = backEntry.arguments?.getString("videoIndex") ?: ""
-            MultipleVideoScreen(navController, videoIndex )
+            MultipleVideoScreen(navController, videoIndex ,lifecycleOwner)
         }
 
         composable(route = NavHelper.FavoriteScreen.route){
@@ -114,7 +114,7 @@ fun NavGraphBuilder.authNavGraph(
         }
 
         composable(route = NavHelper.OnboardingScreen.route){
-            OnboardingScreen(navController)
+            OnboardScreen(navController)
         }
 
         composable(route= NavHelper.GetStartedScreen.route){
@@ -163,6 +163,8 @@ fun NavGraphBuilder.authNavGraph(
         composable(route= NavHelper.UpdateUserPasswordScreen.route){
             UpdateUserPasswordScreen(navController)
         }
+
+
 
     }
 }

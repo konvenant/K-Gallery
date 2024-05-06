@@ -62,6 +62,7 @@ import com.example.k_gallery.data.dataSources.api.models.Message
 import com.example.k_gallery.data.dataSources.api.models.User
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.viewmodel.AuthViewModel
 import com.example.k_gallery.ui.theme.Blue
 import com.example.k_gallery.ui.theme.Milk
@@ -96,6 +97,10 @@ fun VerifyEmailScreen(
                 mutableIntStateOf(0)
             }
             val color = Blue
+
+            val userPrefManager = remember {
+                UserSharedPrefManager(context)
+            }
 
             Column (
                 modifier = Modifier
@@ -187,6 +192,17 @@ fun VerifyEmailScreen(
                     )
                 }
 
+
+                Spacer(modifier = Modifier.height(62.dp))
+
+                Text(
+                    text = "Forfeit",
+                    color = Color.Red,
+                    modifier = Modifier.clickable {
+                        logoutUser(userPrefManager,navController)
+                    }
+                )
+
             }
             PerformVerifyEmail(
                 authViewModel,
@@ -223,6 +239,8 @@ fun PerformVerifyEmail(
                 }
             }
             authViewModel.userDetails.value = null
+
+
         }
         is Resource.Loading -> {
             LoadingDialog()
@@ -296,7 +314,10 @@ fun PerformSendToken(
         }
         }
         is Resource.Loading -> {
-            LoadingDialog()
+            showDialog = true
+          if (showDialog){
+              LoadingDialog()
+          }
         }
 
         is Resource.Error -> {

@@ -100,12 +100,20 @@ fun HomeScreen(
 
     val permissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
 
+    var callOnce by remember {
+        mutableStateOf(true)
+    }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         if (permissionState.hasPermission) {
+            if(callOnce){
+                folderViewModel.fetchFoldersWithRecentImages()
+                callOnce = false
+            }
             ContentItems(
                 folderViewModel = folderViewModel,
                 navController = navController,
@@ -183,6 +191,13 @@ fun ContentItems(
     var errorMessageFromLogin by remember {
         mutableStateOf("")
     }
+
+
+    var showDropDownMenu by remember {
+        mutableStateOf(false)
+    }
+
+
     LaunchedEffect(key1 = showSnackbar ){
         if(showSnackbar){
             scope.launch {
@@ -222,43 +237,46 @@ fun ContentItems(
                     },
                     scrollBehavior = scrollBehavior,
                     actions = {
+                        if(showDropDownMenu){
 
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = null
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = {expanded = false}
-                        ) {
-
-                            DropdownMenuItem(
-                                text = { Text(text = "Account") },
-                                onClick = {  performLogin(
-                                    userPref,
-                                    authViewModel,
-                                    navController,
-                                    lifecycleOwner,
-                                    context,
-                                    showLoadingDialog ={
-                                        showLoadingDialog = it
-                                    },
-                                    showErrorDialog = { show, err ->
-                                        showErrorDialog = show
-                                        errorMessageFromLogin = err
-                                    },
-                                    sharedViewModel
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = null
                                 )
-                                }
-                            )
+                            }
 
-                            DropdownMenuItem(
-                                text = { Text(text="Favorites")},
-                                onClick = { navController.navigate(NavHelper.FavoriteScreen.route)}
-                            )
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = {expanded = false}
+                            ) {
 
+                                DropdownMenuItem(
+                                    text = { Text(text = "Account") },
+                                    onClick = {  performLogin(
+                                        userPref,
+                                        authViewModel,
+                                        navController,
+                                        lifecycleOwner,
+                                        context,
+                                        showLoadingDialog ={
+                                            showLoadingDialog = it
+                                        },
+                                        showErrorDialog = { show, err ->
+                                            showErrorDialog = show
+                                            errorMessageFromLogin = err
+                                        },
+                                        sharedViewModel
+                                    )
+                                    }
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text(text="Favorites")},
+                                    onClick = { navController.navigate(NavHelper.FavoriteScreen.route)}
+                                )
+
+                            }
                         }
                     }
                 )
@@ -296,18 +314,22 @@ fun ContentItems(
                   is Resource.Success -> {
                       val folders = (folderList as Resource.Success<List<Folder>>).data
 
+                      showDropDownMenu = true
+
                       FolderList(foldersWithImages = folders!!, navController = navController){
                           navController.navigate(NavHelper.FoldersScreen.route+"/${it.folderId}/${it.folderName}")
                       }
-                     if (showLoadingDialog){
-                         LoadingDialog()
-                     }
+
+                      if (showLoadingDialog){
+                          LoadingDialog()
+                      }
+
                       if (showErrorDialog){
                           ShowAuthAlertDialog(
                               title = "Error",
                               desc = errorMessageFromLogin,
                               positive = {
-                                         authViewModel.userDetails.value = null
+                                  authViewModel.userDetails.value = null
                                   performLogin(
                                       userPref,
                                       authViewModel,
@@ -374,6 +396,7 @@ fun performLogin(
                                 } else{
                                     sharedViewModel.userData.postValue(user)
                                     navController.navigate(NavHelper.HomeDashBoardScreenScreen.route)
+                                    Toast.makeText(context,"Logged in as ${pref.email}",Toast.LENGTH_LONG).show()
                                 }
                             } else{
                                 authViewModel.sendToken(user.user.email)
@@ -381,6 +404,7 @@ fun performLogin(
                             }
                         }
                     }
+
 
                     is Resource.Error -> {
                         showLoadingDialog(false)
@@ -437,7 +461,12 @@ fun FolderList(
                     .height(900.dp),
                 contentPadding = PaddingValues(top = 20.dp, start = 4.dp, end = 8.dp, bottom = 10.dp)
             ){
-                items(foldersWithImages){ folder ->
+                items(
+                    foldersWithImages,
+                    key = {
+                        it.folderId
+                    }
+                ){ folder ->
                     FolderItem(folder = folder, onItemClick = onItemClick)
                 }
             }

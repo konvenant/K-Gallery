@@ -35,9 +35,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,13 +69,19 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import coil.ImageLoader
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.VideoFrameDecoder
 import com.example.k_gallery.data.dataSources.local.Video
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserPreferences
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import com.example.k_gallery.presentation.viewmodel.VideosInFolderViewModel
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -83,7 +91,8 @@ import com.example.k_gallery.presentation.viewmodel.VideosInFolderViewModel
 fun VideosInFolderScreen(
     navController: NavController,
     folderId: String,
-    folderName: String
+    folderName: String,
+    lifecycleOwner: LifecycleOwner
 ) {
 
     val videosInFolderViewModel: VideosInFolderViewModel = hiltViewModel()
@@ -98,6 +107,21 @@ fun VideosInFolderScreen(
 
     val videos by videosInFolderViewModel.img.observeAsState()
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
+
 
     var selected by remember {
         mutableStateOf(false)
@@ -165,6 +189,32 @@ fun VideosInFolderScreen(
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = null
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                performSaveMultipleVideosToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    selectedVideos.map { it.videoUri },
+                                    folderName,
+                                    lifecycleOwner,
+                                    showLoadingDialog = { state ->
+                                        stateLoading = state
+                                    },
+                                    isSuccess = {
+                                        selectedVideos.clear()
+                                        selected = false
+                                        cancel = false
+                                    }
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
                             )
                         }
                     }
@@ -247,6 +297,10 @@ fun VideosInFolderScreen(
                             },
                             cancelAction = cancel
                         )
+
+                    if (stateLoading){
+                        LoadingDialog()
+                    }
                 }
 
                 else -> {
@@ -487,7 +541,12 @@ fun AllVideosList(
         modifier = Modifier.fillMaxWidth().height(700.dp),
         contentPadding = PaddingValues(top = 40.dp)
     ){
-        items(videos){ video ->
+        items(
+            videos,
+            key = {
+                it.id
+            }
+        ){ video ->
             val isSelected = selectedVideos.contains(video)
             VideoItem(
                 video = video,
@@ -633,4 +692,49 @@ fun shareMultipleVideos(
         )
     }
     context.startActivity(Intent.createChooser(shareIntent,"Share Images"))
+}
+
+
+
+fun performSaveMultipleVideosToAccount(
+    userViewModel: UserViewModel,
+    pref: UserPreferences,
+    context: Context,
+    videoUris : List<Uri>,
+    caption: String,
+    lifecycleOwner: LifecycleOwner,
+    showLoadingDialog: (Boolean) -> Unit,
+    isSuccess: () -> Unit
+) {
+    if (pref.isLoggedIn){
+        userViewModel.saveMultipleVideo(pref.email,videoUris,context, caption)
+        userViewModel.saveMultipleVideoResponse.observe(
+            lifecycleOwner, Observer { message ->
+                when(message) {
+                    is  Resource.Success ->{
+                        val successMessage = message.data?.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,successMessage,Toast.LENGTH_LONG).show()
+                        isSuccess()
+                    }
+
+                    is Resource.Loading -> {
+                        showLoadingDialog(true)
+                    }
+
+                    is Resource.Error ->{
+                        val errMessage = message.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,errMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    else -> {
+
+                    }
+                }
+            }
+        )
+    } else{
+        Toast.makeText(context,"No Account Associated with this device, navigate to account to either SignUp or Login",Toast.LENGTH_LONG).show()
+    }
 }

@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -23,8 +24,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.BottomAppBar
@@ -46,14 +49,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.Image
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.util.calculateImageSize
 import com.example.k_gallery.presentation.viewmodel.PhotosViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import kotlinx.coroutines.delay
 
 
@@ -63,9 +72,20 @@ import kotlinx.coroutines.delay
 @Composable
 fun PhotosImageScreen(
     navController: NavController,
-    imageIndex: String
+    imageIndex: String,
+    lifecycleOwner: LifecycleOwner
 ){
+    val userViewModel: UserViewModel = hiltViewModel()
+
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
     val windowInsetsController = LocalView.current.windowInsetsController
     val photosViewModel: PhotosViewModel = hiltViewModel()
     var isVisible by remember {
@@ -150,6 +170,10 @@ val rotationState = remember {
     }
 
     var expanded by remember {
+        mutableStateOf(false)
+    }
+
+    var stateLoading by remember {
         mutableStateOf(false)
     }
 
@@ -251,6 +275,27 @@ val rotationState = remember {
                                tint = Color.White
                            )
                        }
+
+                       IconButton(
+                           onClick = {
+                               performSaveSingleImageToAccount(
+                                   userViewModel,
+                                   userPref,
+                                   context,
+                                   Uri.parse(imageUri),
+                                   imgName,
+                                   lifecycleOwner,
+                               ){ state ->
+                                  stateLoading = state
+                               }
+                           }
+                       ) {
+                           Icon(
+                               imageVector = Icons.Default.Backup,
+                               contentDescription = null,
+                               tint = Color.White
+                           )
+                       }
                    }, containerColor = Color.Black
                        )
            }
@@ -286,8 +331,23 @@ val rotationState = remember {
                                )
                            }
                        }
+
+                   if (stateLoading){
+                       LoadingDialog()
+                   }
                    }
 
+               is Resource.Error -> {
+                   Image(
+                       modifier = Modifier.fillMaxSize(),
+                       painter = painterResource(id = R.drawable.k_error1),
+                       contentDescription = null
+                   )
+               }
+
+               is Resource.Loading -> {
+                   LoadingDialog()
+               }
 
                else -> {}
            }

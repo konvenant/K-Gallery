@@ -1,15 +1,18 @@
 package com.example.k_gallery.presentation.screens.remote
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -24,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -36,6 +40,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.api.models.Message
@@ -64,6 +70,7 @@ import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.viewmodel.AuthViewModel
 import com.example.k_gallery.presentation.viewmodel.SharedViewModel
 import com.example.k_gallery.presentation.viewmodel.UserSharedViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import com.example.k_gallery.ui.theme.Blue
 import com.example.k_gallery.ui.theme.Milk
 import com.example.k_gallery.ui.theme.Red
@@ -79,6 +86,8 @@ fun LoginScreen(
 ){
     val authViewModel: AuthViewModel = hiltViewModel()
     authViewModel.userDetails.value = null
+
+    val userViewModel : UserViewModel = hiltViewModel()
     Scaffold (
         modifier = Modifier.fillMaxSize()
             ) {
@@ -260,7 +269,8 @@ fun LoginScreen(
                 password  ,
                 userPrefManager,
                 navController,
-                sharedViewModel
+                sharedViewModel,
+                userViewModel
             )
         }
     }
@@ -275,18 +285,24 @@ private fun HandleLogin(
     password: String,
     userSharedPrefManager: UserSharedPrefManager,
     navController: NavController,
-    sharedViewModel: UserSharedViewModel
+    sharedViewModel: UserSharedViewModel,
+    userViewModel: UserViewModel
 ) {
+
     val state by authViewModel.userDetails.observeAsState()
     var showDialog by remember {
         mutableStateOf(true)
     }
+    val context = LocalContext.current
     when(state){
         is Resource.Success -> {
             val success = (state as Resource.Success<User>).data?.user!!
             val user = (state as Resource.Success<User>).data!!
             sharedViewModel.userData.postValue(user)
 
+            var showToast by remember {
+                mutableStateOf(true)
+            }
             showDialog = false
 
             if (success.isEmailVerified){
@@ -294,12 +310,21 @@ private fun HandleLogin(
                         navController.navigate(NavHelper.CompleteRegistrationScreen.route+"/${email}")
                         authViewModel.userDetails.value = null
                     } else{
+//                        if (showToast){
+//                            Toast.makeText(context,"Logged in as $email", Toast.LENGTH_LONG).show()
+//                            showToast = false
+//                        }
+
+                        userViewModel.getUserSettings(email)
+                        authViewModel.userDetails.value = null
                         navController.navigate(NavHelper.HomeDashBoardScreenScreen.route){
                             popUpTo(NavHelper.LoginScreen.route){
-                                inclusive = true
+                                saveState = true
+//                                inclusive = true
                             }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        authViewModel.userDetails.value = null
                     }
             } else{
                 authViewModel.sendToken(email)
@@ -379,25 +404,52 @@ fun ShowAuthAlertDialog(
         }
     )
 }
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoadingDialog() {
-        AlertDialog(onDismissRequest = {  }, title = {
-            Text(text = "Loading")
-        }, text = {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.End))
-                Text(text = "Please wait...")
-            }
-        }, confirmButton = {
 
-        }, properties = DialogProperties(
+
+    AlertDialog(
+        onDismissRequest = {
+
+    }, properties = DialogProperties(
             dismissOnBackPress = true,
             dismissOnClickOutside = false
-        ))
+        )
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+                Box(
+                    modifier = Modifier
+                        .padding(32.dp)
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .clip(RoundedCornerShape(8.dp))
+                ) {
+                    CircularProgressIndicator(modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(48.dp))
+                }
+        }
+    }
+}
+
+
+@Composable
+fun LinearLoadingDialog() {
+    AlertDialog(onDismissRequest = {  }, title = {
+        Text(text = "Loading")
+    }, text = {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    }, confirmButton = {
+
+    }, properties = DialogProperties(
+        dismissOnBackPress = true,
+        dismissOnClickOutside = false
+    ))
 
 }
+

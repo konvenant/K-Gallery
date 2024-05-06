@@ -33,6 +33,9 @@ class AuthViewModel @Inject constructor(
     val userDetails: MutableLiveData<Resource<User>> = MutableLiveData()
     lateinit var userDetailResponse: User
 
+    val userDetailsDuplicate: MutableLiveData<Resource<User>> = MutableLiveData()
+    lateinit var userDetailDuplicateResponse: User
+
     var verifyPasswordDetails: MutableLiveData<Resource<User>> = MutableLiveData()
     lateinit var verifyPasswordDetailResponse: User
 
@@ -118,9 +121,10 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    private fun handleLogin(response: Response<User>): Resource<User> {
+    private suspend fun handleLogin(response: Response<User>): Resource<User> {
         if (response.isSuccessful){
             response.body()?.let { user ->
+                userRepository.updateDeliveryState(user.user.email)
                 userDetailResponse  = user
                 return Resource.Success(user)
             }
@@ -315,7 +319,7 @@ class AuthViewModel @Inject constructor(
 
     private suspend fun handleCompleteForgotPassword(email: String,password: String){
 
-
+        userDetailsDuplicate.postValue(Resource.Loading())
         userDetails.postValue(Resource.Loading())
         try {
             val url = "/user/updatePassword"
@@ -325,19 +329,22 @@ class AuthViewModel @Inject constructor(
                     response.body()?.let { user ->
                         userDetailResponse = user
                         userDetails.postValue(Resource.Success(userDetailResponse))
+
+                        userDetailDuplicateResponse = user
+                        userDetailsDuplicate.postValue(Resource.Success(userDetailDuplicateResponse))
                     }
                 } else{
                     val errorBody = response.errorBody()?.string()
                     val jsonObj = JSONObject(errorBody!!)
                     val error = jsonObj.getString("message")
                     val errorMessage = "An Error Occurred: $error"
-                    userDetails.postValue(Resource.Error(errorMessage))
+                    userDetailsDuplicate.postValue(Resource.Error(errorMessage))
                 }
             } else{
-                userDetails.postValue(Resource.Error("No internet connection"))
+                userDetailsDuplicate.postValue(Resource.Error("No internet connection"))
             }
         } catch (e:Exception){
-            userDetails.postValue(Resource.Error(e.message.toString()))
+            userDetailsDuplicate.postValue(Resource.Error(e.message.toString()))
         }
     }
 

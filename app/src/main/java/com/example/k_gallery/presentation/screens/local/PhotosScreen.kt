@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FeaturedVideo
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,12 +61,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.Image
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.viewmodel.PhotosViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
 
@@ -73,14 +79,32 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotosScreen(
-    navController: NavController
+    navController: NavController,
+    lifecycleOwner: LifecycleOwner
 ) {
 
     val photosViewModel : PhotosViewModel = hiltViewModel()
 
     val folderSize = photosViewModel.folderMetrics.observeAsState().value?.first.toString()
     val folderCount = photosViewModel.folderMetrics.observeAsState().value?.second.toString()
+
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
+
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     val snackbarHostState = remember {
@@ -185,6 +209,32 @@ fun PhotosScreen(
                                 contentDescription = null
                             )
                         }
+
+                        IconButton(
+                            onClick = {
+                                performSaveMultipleImagesToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    selectedImages.map { it.uri },
+                                    "photo",
+                                    lifecycleOwner,
+                                    showLoadingDialog = { state ->
+                                        stateLoading = state
+                                    },
+                                    isSuccess = {
+                                        selectedImages.clear()
+                                        selected = false
+                                        cancel = false
+                                    }
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
+                            )
+                        }
                     }
                 )
             } else {
@@ -284,6 +334,10 @@ fun PhotosScreen(
                                     },
                                     cancelAction = cancel
                                 )
+
+                                if (stateLoading){
+                                    LoadingDialog()
+                                }
                             }
                         }
                     }

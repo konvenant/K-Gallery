@@ -33,4 +33,37 @@ sealed class NavHelper(var route:String){
     object OnlineFavoriteScreen: NavHelper("OnlineFavoriteScreen")
     object UserScreen: NavHelper("UserScreen")
     object AuthScreens: NavHelper("AuthScreens")
+
+    object ViewOneImageScreen: NavHelper("ViewOneImage")
+
+    object ViewOneVideoScreen: NavHelper("ViewOneVideo")
+
+    object ViewAllSavedImageScreen: NavHelper("ViewAllSavedImages")
+
+    object ViewAllSavedVideoScreen: NavHelper("ViewAllSavedVideos")
+
+    object ViewAllSentImageScreen: NavHelper("ViewAllSentImages")
+
+    object ViewAllSentVideoScreen: NavHelper("ViewAllSentVideos")
+
+    object ViewAllReceivedImageScreen: NavHelper("ViewAllReceivedImage")
+
+    object ViewAllReceivedVideoScreen: NavHelper("ViewAllReceivedVideos")
+    object ViewAllFavoriteImageScreen: NavHelper("ViewAllFavoriteImage")
+    object ViewAllFavoriteVideoScreen: NavHelper("ViewFavoriteVideo")
+    object RemoteDetailsScreen: NavHelper("RemoteDetails")
+    object DetailsScreen2: NavHelper("secondDetail")
+
+    object ChatMessageScreen: NavHelper("chatMessageScreen")
+    object SentImageScreen: NavHelper("sentImageScreen")
+    object SentVideoScreen: NavHelper("sentVideoScreen")
+    object ReceivedImageScreen: NavHelper("receivedImageScreen")
+    object ReceivedVideoScreen: NavHelper("receivedVideoScreen")
+    object NotificationScreen : NavHelper("notificationScreen")
+    object ProfileViewOrEditScreen : NavHelper("viewOrEditProfileScreen")
+
+    object UserSettingsScreen: NavHelper("userSettingScreen")
+
+
+
 }

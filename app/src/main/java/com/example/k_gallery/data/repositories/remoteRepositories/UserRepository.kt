@@ -7,9 +7,11 @@ import com.example.k_gallery.data.dataSources.api.models.FavoriteImageDeleteRequ
 import com.example.k_gallery.data.dataSources.api.models.FavoriteVideoAddRequest
 import com.example.k_gallery.data.dataSources.api.models.FavoriteVideoDeleteRequest
 import com.example.k_gallery.data.dataSources.api.models.ImageDeleteRequest
+import com.example.k_gallery.data.dataSources.api.models.ImageSendRequest
 import com.example.k_gallery.data.dataSources.api.models.SentImageDeleteRequest
 import com.example.k_gallery.data.dataSources.api.models.SentVideoDeleteRequest
 import com.example.k_gallery.data.dataSources.api.models.VideoDeleteRequest
+import com.example.k_gallery.data.dataSources.api.models.VideoSendRequest
 import okhttp3.MultipartBody
 import javax.inject.Inject
 
@@ -60,15 +62,26 @@ class UserRepository @Inject constructor(
     suspend fun saveImage(email: String,caption:String,image: MultipartBody.Part) =
         UserRetrofitInstance.saveImage(email,caption,image)
 
+    suspend fun sendImage(fromEmail: String,toEmail: String,caption: String,image: MultipartBody.Part) =
+        UserRetrofitInstance.sendImage(fromEmail, toEmail, caption, image)
 
     suspend fun saveVideo(email: String,caption:String,video: MultipartBody.Part) =
         UserRetrofitInstance.saveVideo(email,caption,video)
 
+    suspend fun sendVideo(fromEmail: String,toEmail: String,caption: String,video: MultipartBody.Part) =
+        UserRetrofitInstance.sendVideo(fromEmail, toEmail, caption, video)
+
     suspend fun saveMultipleImages(email: String,caption: String,images: List<MultipartBody.Part>) =
         UserRetrofitInstance.saveMultipleImage(email,caption, images )
 
+    suspend fun sendMultipleImages(request: ImageSendRequest) =
+        UserRetrofitInstance.sendMultipleImage(request)
+
     suspend fun saveMultipleVideo(email: String,caption: String,videos: List<MultipartBody.Part>) =
         UserRetrofitInstance.saveMultipleVideo(email,caption, videos)
+
+    suspend fun sendMultipleVideo(request: VideoSendRequest) =
+        UserRetrofitInstance.sendMultipleVideos(request)
 
     suspend fun getSavedImages(email: String) =
         UserRetrofitInstance.getSavedImages(email)
@@ -100,11 +113,13 @@ class UserRepository @Inject constructor(
     suspend fun getAllReceievedVideos(email: String) =
         UserRetrofitInstance.getAllRecievedVideos(email)
 
-    suspend fun getAllChatImages(email: String) =
-        UserRetrofitInstance.getAllChatImages(email)
+    suspend fun getAllChatImages(fromEmail: String, toEmail: String) =
+        UserRetrofitInstance.getAllChatImages(fromEmail, toEmail)
 
-    suspend fun getAllChatVideos(email: String) =
-        UserRetrofitInstance.getAllChatVideos(email)
+    suspend fun getAllChatVideos(fromEmail: String, toEmail: String) =
+        UserRetrofitInstance.getAllChatVideos(fromEmail, toEmail)
+
+
 
     suspend fun deleteSentImage(fromEmail:String,toEmail:String,id: String) =
         UserRetrofitInstance.deleteSentImage(fromEmail, toEmail, id)
@@ -172,7 +187,19 @@ class UserRepository @Inject constructor(
     suspend fun getUserSettings(email: String) =
         UserRetrofitInstance.getUserSettings(email)
 
-    suspend fun updateSettings(email: String, darkMode:Boolean,language:String,notificationOn:Boolean,sendNewsLetter:Boolean) =
+    suspend fun updateSettings(
+        email: String,
+        darkMode: Boolean,
+        language: String,
+        notificationOn: Boolean,
+        sendNewsLetter: Boolean
+    ) =
         UserRetrofitInstance.updateSetting(email, darkMode, language, notificationOn, sendNewsLetter)
-}
 
+
+    suspend fun getChatItemList(email: String) =
+        UserRetrofitInstance.getChatItemList(email)
+
+    suspend fun getChatMessageList(email1: String, email2: String) =
+        UserRetrofitInstance.getChatMessageList(email1, email2)
+}

@@ -1,7 +1,9 @@
 package com.example.k_gallery.presentation.screens.remote
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -85,10 +87,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.api.models.User
 import com.example.k_gallery.presentation.graph.HomeNavGraph
 import com.example.k_gallery.presentation.screens.local.performLogin
@@ -102,19 +107,25 @@ import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import com.example.k_gallery.ui.theme.Blue
 import com.example.k_gallery.ui.theme.Milk
 import com.example.k_gallery.ui.theme.Red
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeDashboardScreen(
     navController: NavHostController ,
     userSharedViewModel: UserSharedViewModel,
-    lifecycleOwner: LifecycleOwner
+    lifecycleOwner: LifecycleOwner,
+    userViewModel: UserViewModel
 ){
 
-    val userViewModel: UserViewModel = hiltViewModel()
+    val coroutineException = CoroutineExceptionHandler{ _, throwable ->
+
+    }
+
     val navControllerBottomBar = rememberNavController()
     val user = userSharedViewModel.userData.value
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -132,11 +143,23 @@ fun HomeDashboardScreen(
         mutableStateOf(false)
     }
 
+    var showTopBar by remember {
+        mutableStateOf(true)
+    }
+
     val email = user!!.user.email
 
     val showFab = userViewModel.showFab.observeAsState()
     val context = LocalContext.current
 
+    var selectedItemIndex by remember {
+        mutableIntStateOf(0)
+    }
+
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute by remember {
+        derivedStateOf { currentBackStackEntry?.destination?.route?: NavHelper.HomeOnlineScreen.route }
+    }
 
  Surface(modifier = Modifier.fillMaxSize()) {
      LaunchedEffect(Unit){
@@ -146,7 +169,7 @@ fun HomeDashboardScreen(
      }
      ModalNavigationDrawer(
          drawerContent = {
-            ModalDrawer(navController, scope,drawerState,user!!)
+            ModalDrawer(navController, scope,drawerState, user,notificationCount)
          },
          drawerState = drawerState
      ) {
@@ -155,52 +178,60 @@ fun HomeDashboardScreen(
                  .nestedScroll(scrollBehavior.nestedScrollConnection)
                  .fillMaxSize(),
              topBar = {
-                 TopAppBar(
-                     title = {
+                if (showTopBar){
+                    TopAppBar(
+                        title = {
 
-                     },
-                     modifier = Modifier,
-                     scrollBehavior = scrollBehavior,
-                     actions = {
-                         BadgedBox(badge = {
-                             if (notificationCount != 0){
-                                 Badge{
-                                     Text(text = notificationCount.toString() )
-                                 }
-                             } else if(hasNewNotification) {
-                                 Badge()
-                             }
+                        },
+                        modifier = Modifier,
+                        scrollBehavior = scrollBehavior,
+                        actions = {
+                            BadgedBox(badge = {
+                                if (notificationCount != 0){
+                                    Badge{
+                                        Text(text = notificationCount.toString() )
+                                    }
+                                } else if(hasNewNotification) {
+                                    Badge()
+                                }
 
-                         },modifier = Modifier.padding(16.dp)) {
-                             IconButton(onClick = { /*TODO*/ }) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = null
-                                )
-                             }
-                         }
-                         AsyncImage(
-                             model = user.user.imageUrl,
-                             contentDescription = "user image",
-                             modifier = Modifier
-                                 .size(35.dp)
-                                 .clip(CircleShape)
-                                 .clickable { }
-                         )
-                     },
-                     navigationIcon = {
-                         IconButton(onClick = {
-                             scope.launch {
-                                 drawerState.open()
-                             }
-                         }) {
-                             Icon(imageVector = Icons.Default.Menu, contentDescription = null)
-                         }
-                     }
-                 )
+                            },modifier = Modifier.padding(16.dp)) {
+                                IconButton(onClick = {
+                                    navController.navigate(NavHelper.NotificationScreen.route+"/${user.user.email}")
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null
+                                    )
+                                }
+                            }
+                            AsyncImage(
+                                model = user.user.imageUrl,
+                                contentDescription = "user image",
+                                modifier = Modifier
+                                    .size(35.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                               navController.navigate(NavHelper.ProfileViewOrEditScreen.route+"/${user.user.email}")
+                                    },
+                                placeholder = painterResource(id = R.drawable.full_logo),
+                                error = painterResource(id = R.drawable.logo)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                scope.launch {
+                                    drawerState.open()
+                                }
+                            }) {
+                                Icon(imageVector = Icons.Default.Menu, contentDescription = null)
+                            }
+                        }
+                    )
+                }
              },
              bottomBar = {
-                 OnlineBottomNavigation(navControllerBottomBar,user.user.email)
+                 OnlineBottomNavigation(navControllerBottomBar,user.user.email,selectedItemIndex)
              },
              floatingActionButton = {
                  if (showFab.value == true){
@@ -211,16 +242,17 @@ fun HomeDashboardScreen(
                              tint = Color.White
                          )
                      }
-
                  }
              }
 
          ) { innerPadding ->
              val modifier = Modifier.padding(innerPadding)
-             HomeNavGraph(navControllerBottomBar,userViewModel,email)
+             HomeNavGraph(navControllerBottomBar,userViewModel,email,navController,userSharedViewModel)
              if (showFab.value == true){
                  Box(
-                     modifier = Modifier.fillMaxSize(),
+                     modifier = Modifier
+                         .fillMaxSize()
+                         .fillMaxWidth(),
                      contentAlignment = Alignment.BottomCenter
                  ) {
                      DropdownMenu(
@@ -231,6 +263,11 @@ fun HomeDashboardScreen(
                          DropdownMenuItem(
                              text = { Text(text = "Save Media") },
                              onClick = {
+                                 navController.navigate(NavHelper.SavedMediaScreen.route){
+                                     popUpTo(navController.graph.findStartDestination().id)
+                                     launchSingleTop = true
+
+                                 }
                              },
                              trailingIcon = {
                                  Icon(imageVector = Icons.Default.PermMedia, contentDescription = null)
@@ -239,7 +276,13 @@ fun HomeDashboardScreen(
 
                          DropdownMenuItem(
                              text = { Text(text="Send Media")},
-                             onClick = { },
+                             onClick = {
+                                 navController.navigate(NavHelper.SendMediaScreen.route){
+                                     popUpTo(navController.graph.findStartDestination().id)
+                                     launchSingleTop = true
+
+                                 }
+                             },
                              trailingIcon = {
                                  Icon(imageVector = Icons.Default.Message, contentDescription = null)
                              }
@@ -248,6 +291,10 @@ fun HomeDashboardScreen(
                      }
                  }
              }
+
+
+
+
          }
      }
  }
@@ -283,7 +330,7 @@ fun HomeDashboardScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OnlineBottomNavigation(navController: NavController,email:String){
+fun OnlineBottomNavigation(navController: NavController,email:String,selectedIndex:Int){
     val items = listOf(
         BottomNavigationItem(
             title = "Home",
@@ -323,20 +370,25 @@ fun OnlineBottomNavigation(navController: NavController,email:String){
     )
 
     var selectedItemIndex by remember {
-        mutableIntStateOf(0)
+        mutableIntStateOf(selectedIndex)
     }
 
 
     NavigationBar {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
         items.forEachIndexed { index, bottomNavigationItem ->
             NavigationBarItem(
-                selected = selectedItemIndex == index,
+                selected = currentDestination?.hierarchy?.any { it.route == bottomNavigationItem.route } == true,
                 onClick = {
-                          navController.navigate(bottomNavigationItem.route){
-                              popUpTo(navController.graph.findStartDestination().id)
-                              launchSingleTop = true
-                              selectedItemIndex = index
-                          }
+                    navController.navigate(bottomNavigationItem.route){
+                        popUpTo(navController.graph.findStartDestination().id){
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        selectedItemIndex = index
+                        restoreState = true
+                    }
                 },
                 icon = {
                   BadgedBox(badge = {
@@ -374,9 +426,9 @@ fun ModalDrawer(
     navController: NavController,
     scope: CoroutineScope,
     drawerState: DrawerState,
-    user: User
+    user: User,
+    notificationCount: Int
 ){
-
     var selectedItem by rememberSaveable {
         mutableIntStateOf(0)
     }
@@ -385,31 +437,31 @@ fun ModalDrawer(
             title = "Home",
             unSelectedIcon = Icons.Outlined.Home,
             selectedIcon = Icons.Filled.Home,
-            route = NavHelper.AuthScreens.route,
+            route = NavHelper.HomeDashBoardScreenScreen.route,
             hasNew = false
         ),
         BottomNavigationItem(
             title = "Profile",
             unSelectedIcon = Icons.Outlined.Person,
             selectedIcon = Icons.Filled.Person,
-            route = NavHelper.AuthScreens.route,
+            route = NavHelper.ProfileViewOrEditScreen.route+"/${user.user.email}",
             hasNew = false
         ),
         BottomNavigationItem(
             title = "Notifications",
             unSelectedIcon = Icons.Outlined.Notifications,
             selectedIcon = Icons.Filled.Notifications,
-            hasNew = true,
-            badgeCount = 9,
-            route = NavHelper.AuthScreens.route
+            hasNew = notificationCount != 0,
+            badgeCount = notificationCount,
+            route = NavHelper.NotificationScreen.route+"/${user.user.email}"
         ),
         BottomNavigationItem(
             title = "Settings",
             unSelectedIcon = Icons.Outlined.Settings,
             selectedIcon = Icons.Filled.Settings,
-            hasNew = true,
+            hasNew = false,
             badgeCount = 2,
-            route = NavHelper.AuthScreens.route
+            route = NavHelper.UserSettingsScreen.route+"/${user.user.email}"
         )
     )
     ModalDrawerSheet {
@@ -447,6 +499,13 @@ fun ModalDrawer(
                     selectedItem = index
                     scope.launch {
                         drawerState.close()
+                    }
+                    navController.navigate(item.route){
+                        popUpTo(navController.graph.findStartDestination().id){
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 icon = {

@@ -20,10 +20,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.BottomAppBar
@@ -50,13 +52,20 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import com.example.k_gallery.data.dataSources.local.Video
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserPreferences
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.util.calculateImageSize
 import com.example.k_gallery.presentation.util.deleteVideo
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import com.example.k_gallery.presentation.viewmodel.VideosInFolderViewModel
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.ui.StyledPlayerView
@@ -70,11 +79,12 @@ import kotlinx.coroutines.delay
 fun VideoScreen(
     navController: NavController,
     imageIndex: String,
-    folderId: String
+    folderId: String,
+    lifecycleOwner: LifecycleOwner
 ){
 
     val windowInsetsController = LocalView.current.windowInsetsController
-    val context = LocalContext.current
+
     val videoViewModel : VideosInFolderViewModel = hiltViewModel()
 
     var isVisible by remember {
@@ -83,6 +93,22 @@ fun VideoScreen(
     val scale = remember {
         mutableFloatStateOf(1f)
     }
+
+    val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
 
 
 
@@ -201,7 +227,7 @@ fun VideoScreen(
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color.Black,
+                        containerColor = Color.Transparent,
                     )
                 )
 
@@ -225,7 +251,29 @@ fun VideoScreen(
                                 tint = Color.White
                             )
                         }
-                    }, containerColor = Color.Black
+
+                        IconButton(
+                            onClick = {
+                                performSaveSingleVideoToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    Uri.parse(videoUri),
+                                    imgName,
+                                    lifecycleOwner,
+                                ){ state ->
+                                    stateLoading = state
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+
+                    }, containerColor = Color.Transparent
                 )
             }
         }
@@ -253,6 +301,10 @@ fun VideoScreen(
                                 isVisible = !isVisible
                             })
                         }
+                    }
+
+                    if (stateLoading){
+                        LoadingDialog()
                     }
                 }
                 else -> {}
@@ -322,6 +374,7 @@ fun VideoPlayer(videoUri: Uri, isVisible: () -> Unit) {
     var isPlaying by rememberSaveable {
         mutableStateOf(false)
     }
+
     var visible by rememberSaveable {
         mutableStateOf(false)
     }
@@ -372,6 +425,75 @@ fun VideoPlayer(videoUri: Uri, isVisible: () -> Unit) {
     }
 }
 
+@Composable
+fun OnlineVideoPlayer(videoUri: String, isVisible: () -> Unit) {
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+
+    var isPlaying by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var visible by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val mContext = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(mContext).build().apply {
+            setMediaItem(MediaItem.fromUri(videoUri))
+            prepare()
+            playWhenReady = isPlaying
+        }
+    }
+
+    val playPauseIcon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow
+
+
+    AndroidView(
+        factory = { context ->
+            StyledPlayerView(context).apply {
+                player = exoPlayer
+            }
+        },
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable {
+                isPlaying = !isPlaying
+                isVisible()
+            }
+    )
+
+
+
+
+    DisposableEffect(Unit){
+
+        val lifecycleObserver = LifecycleEventObserver { _,event ->
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                exoPlayer.release()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+        onDispose {
+            exoPlayer.release()
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
   fun shareVideo(context: Context, videoUri: String) {
     val intent = Intent(Intent.ACTION_SEND)
     intent.type = "video/*"
@@ -397,3 +519,48 @@ fun onDeleteVideoClicked(
     val deletionResult = deleteVideo(videoUri,context)
     onDeleteNotification(deletionResult)
 }
+
+
+
+
+fun performSaveSingleVideoToAccount(
+    userViewModel: UserViewModel,
+    pref: UserPreferences,
+    context: Context,
+    videoUri : Uri,
+    caption: String,
+    lifecycleOwner: LifecycleOwner,
+    showLoadingDialog: (Boolean) -> Unit
+) {
+    if (pref.isLoggedIn){
+        userViewModel.saveSingleVideo(pref.email,videoUri,context,caption)
+        userViewModel.saveVideoResponse.observe(
+            lifecycleOwner, Observer { message ->
+                when(message) {
+                    is  Resource.Success ->{
+                        val successMessage = "Video Saved Successfully"
+                        showLoadingDialog(false)
+                        Toast.makeText(context,successMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    is Resource.Loading -> {
+                        showLoadingDialog(true)
+                    }
+
+                    is Resource.Error ->{
+                        val errMessage = message.message
+                        showLoadingDialog(false)
+                        Toast.makeText(context,errMessage,Toast.LENGTH_LONG).show()
+                    }
+
+                    else -> {
+
+                    }
+                }
+            }
+        )
+    } else{
+        Toast.makeText(context,"No Account Associated with this device, navigate to account to either SignUp or Login",Toast.LENGTH_LONG).show()
+    }
+}
+

@@ -4,5 +4,5 @@ import android.provider.ContactsContract.CommonDataKinds.Email
 
 data class SentImageDeleteRequest(
     val email: String,
-    val arrayOfobjects: List<ImageObject>
+    val arrayOfObjects: List<ImageObject>
 )

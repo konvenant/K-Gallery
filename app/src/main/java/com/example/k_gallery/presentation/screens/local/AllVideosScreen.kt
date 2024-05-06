@@ -1,6 +1,7 @@
 package com.example.k_gallery.presentation.screens.local
 
 import android.app.Activity
+import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
@@ -54,19 +56,24 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.LifecycleOwner
 import androidx.navigation.NavController
 import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.Video
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
+import com.example.k_gallery.presentation.util.UserSharedPrefManager
 import com.example.k_gallery.presentation.viewmodel.AllVideoViewModel
+import com.example.k_gallery.presentation.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.R)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllVideosScreen(
-    navController: NavController
+    navController: NavController,
+    lifecycleOwner: LifecycleOwner
 ) {
     val allVideosViewModel : AllVideoViewModel = hiltViewModel()
     val folderSize = allVideosViewModel.folderMetrics.observeAsState().value?.first.toString()
@@ -86,6 +93,21 @@ fun AllVideosScreen(
     }
 
     val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
+
+    val userPref by remember{
+        mutableStateOf(userPrefManager.getLoggedInPrefs())
+    }
+
+    var stateLoading by remember {
+        mutableStateOf(false)
+    }
+
+    val userViewModel: UserViewModel = hiltViewModel()
+
 
     var selected by remember {
         mutableStateOf(false)
@@ -175,6 +197,31 @@ fun AllVideosScreen(
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = null
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                performSaveMultipleVideosToAccount(
+                                    userViewModel,
+                                    userPref,
+                                    context,
+                                    selectedVideos.map { it.videoUri },
+                                    "videos",
+                                    lifecycleOwner,
+                                    showLoadingDialog = { state ->
+                                        stateLoading = state
+                                    },
+                                    isSuccess = {
+                                        selectedVideos.clear()
+                                        selected = false
+                                        cancel = false
+                                    }
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Backup,
+                                contentDescription = null,
                             )
                         }
                     }
@@ -276,6 +323,9 @@ fun AllVideosScreen(
                                     },
                                     cancelAction = cancel
                                 )
+                                if (stateLoading){
+                                    LoadingDialog()
+                                }
                             }
                         }
                     }

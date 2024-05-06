@@ -176,7 +176,7 @@ fun CompleteForgotPasswordPasswordScreen(
 
 
 
-   HandleCompleteForgotPassword(authViewModel, email, password,navController,snackbarHostState, scope, )
+        HandleCompleteForgotPassword(authViewModel, email, password,navController,snackbarHostState, scope, )
     }
 
 }
@@ -220,9 +220,9 @@ fun HandleCompleteForgotPassword(
 
             authViewModel.userDetails.value = null
 
-          LaunchedEffect(Unit){
-                  snackbarHostState.showSnackbar("User Password Updated Successfully", withDismissAction = true)
-          }
+            LaunchedEffect(Unit){
+                snackbarHostState.showSnackbar("User Password Updated Successfully", withDismissAction = true)
+            }
         }
 
         is Resource.Loading -> {

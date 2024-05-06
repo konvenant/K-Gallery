@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -77,6 +79,12 @@ fun CompleteRegistrationScreen(
     val authViewModel: AuthViewModel = hiltViewModel()
     authViewModel.userDetails.value = null
 
+
+    val context = LocalContext.current
+
+    val userPrefManager = remember {
+        UserSharedPrefManager(context)
+    }
 
     Scaffold (
         modifier = Modifier.fillMaxSize()
@@ -259,6 +267,16 @@ fun CompleteRegistrationScreen(
                     fontSize = 25.sp
                 ))
             }
+
+            Spacer(modifier = Modifier.height(42.dp))
+
+            Text(
+                text = "Forfeit",
+                color = Color.Red,
+                modifier = Modifier.clickable {
+                    logoutUser(userPrefManager,navController)
+                }
+            )
         }
 
 
@@ -317,7 +335,10 @@ fun HandleCompleteRegistration(
             authViewModel.userDetails.value = null
         }
         is Resource.Loading -> {
-            LoadingDialog()
+            showDialog = true
+          if (showDialog){
+              LoadingDialog()
+          }
         }
 
         is Resource.Error -> {

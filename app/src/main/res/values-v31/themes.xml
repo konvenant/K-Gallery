@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.KGallery" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowSplashScreenBackground">@color/milk</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/logo</item>
+    </style>
+</resources>

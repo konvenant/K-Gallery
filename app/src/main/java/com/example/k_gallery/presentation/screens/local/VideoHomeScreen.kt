@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FeaturedVideo
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.NearbyError
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -69,6 +70,8 @@ import coil.compose.rememberAsyncImagePainter
 import coil.decode.VideoFrameDecoder
 import com.example.k_gallery.R
 import com.example.k_gallery.data.dataSources.local.VideoFolder
+import com.example.k_gallery.presentation.screens.remote.LoadingDialog
+import com.example.k_gallery.presentation.screens.remote.ShowAuthAlertDialog
 import com.example.k_gallery.presentation.util.NavHelper
 import com.example.k_gallery.presentation.util.Resource
 import com.example.k_gallery.presentation.util.UserSharedPrefManager
@@ -158,6 +161,10 @@ fun VideoContentScreen(
         mutableStateOf(false)
     }
 
+    var showDropDownMenu by remember {
+        mutableStateOf(false)
+    }
+
     var errorMessageFromLogin by remember {
         mutableStateOf("")
     }
@@ -203,42 +210,44 @@ fun VideoContentScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 actions = {
-                    IconButton(onClick = { expanded = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = {expanded = false}
-                    ) {
-
-                        DropdownMenuItem(
-                            text = { Text(text = "Account") },
-                            onClick = {  performLogin(
-                                userPref,
-                                authViewModel,
-                                navController,
-                                lifecycleOwner,
-                                context,
-                                showLoadingDialog ={
-                                    showLoadingDialog = it
-                                },
-                                showErrorDialog = { show, err ->
-                                    showErrorDialog = show
-                                    errorMessageFromLogin = err
-                                },
-                                sharedViewModel
+                    if (showDropDownMenu){
+                        IconButton(onClick = { expanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = null
                             )
-                            }
-                        )
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = {expanded = false}
+                        ) {
 
-                        DropdownMenuItem(
-                            text = { Text(text="Favorites")},
-                            onClick = { navController.navigate(NavHelper.FavoriteScreen.route)}
-                        )
+                            DropdownMenuItem(
+                                text = { Text(text = "Account") },
+                                onClick = {  performLogin(
+                                    userPref,
+                                    authViewModel,
+                                    navController,
+                                    lifecycleOwner,
+                                    context,
+                                    showLoadingDialog = {
+                                        showLoadingDialog = it
+                                    },
+                                    showErrorDialog = { show, err ->
+                                        showErrorDialog = show
+                                        errorMessageFromLogin = err
+                                    },
+                                    sharedViewModel
+                                )
+                                }
+                            )
 
+                            DropdownMenuItem(
+                                text = { Text(text="Favorites")},
+                                onClick = { navController.navigate(NavHelper.FavoriteScreen.route)}
+                            )
+
+                        }
                     }
                 }
             )
@@ -271,9 +280,44 @@ fun VideoContentScreen(
                     errorMessageFromComposable = errorMessage!!
                 }
                 is Resource.Success -> {
+
+                    showDropDownMenu = true
                     val folders = (videoFolder as Resource.Success<List<VideoFolder>>).data
                     VideoFolderList(videoFolders = folders!!, navController = navController){
                         navController.navigate(NavHelper.VideosInFolderScreen.route+"/${it.id.toString()}/${it.name}")
+                    }
+
+                    if (showLoadingDialog){
+                        LoadingDialog()
+                    }
+
+                    if (showErrorDialog){
+                        ShowAuthAlertDialog(
+                            title = "Error",
+                            desc = errorMessageFromLogin,
+                            positive = {
+                                authViewModel.userDetails.value = null
+                                performLogin(
+                                    userPref,
+                                    authViewModel,
+                                    navController,
+                                    lifecycleOwner,
+                                    context,
+                                    showLoadingDialog ={
+                                        showLoadingDialog = it
+                                    },
+                                    showErrorDialog = { show, err ->
+                                        showErrorDialog = show
+                                        errorMessageFromLogin = err
+                                    },
+                                    sharedViewModel
+                                )
+                            },
+                            negative = { showErrorDialog = false  },
+                            positiveText = "try again",
+                            negativeText = "close",
+                            icon = Icons.Default.NearbyError
+                        )
                     }
                 }
 
@@ -325,7 +369,12 @@ fun VideoFolderList(
                     .height(900.dp),
                 contentPadding = PaddingValues(top = 20.dp, start = 4.dp, end = 8.dp, bottom = 60.dp)
             ){
-                items(videoFolders){ folder ->
+                items(
+                    videoFolders,
+                    key = {
+                        it.id
+                    }
+                ){ folder ->
                     VideoFolderItem(folder = folder, onItemClick = onItemClick )
                 }
             }
